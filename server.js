@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-const PORT = provess.env.PORT;
+const PORT = process.env.PORT || 3006;
 
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
