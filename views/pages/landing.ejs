@@ -1,0 +1,72 @@
+<%- include('../partials/header') %>
+<%- include('../partials/navbar') %>
+<div class="page">
+<aside class="sidebar">
+    <h1>Swiss Trails</h1>
+    <p><%= trails.length %> trail points</p>
+
+    <ul class="trail-list">
+    <% trails.forEach((trail, index) => { %>
+        <li
+        class="trail-item"
+        data-index="<%= index %>"
+        >
+        <strong><%= trail.trail_name %></strong>
+        <div class="coords">
+            <%= trail.latitude %>, <%= trail.longitude %>
+        </div>
+        </li>
+    <% }) %>
+    </ul>
+</aside>
+
+<div id="map"></div>
+</div>
+
+<!-- Leaflet JS -->
+<script
+src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+crossorigin=""
+></script>
+
+<script>
+const trails = <%- JSON.stringify(trails) %>;
+
+const map = L.map('map').setView([46.8, 8.2], 8);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const markers = [];
+
+trails.forEach((trail) => {
+    const marker = L.marker([trail.latitude, trail.longitude])
+    .addTo(map)
+    .bindPopup(`
+        <strong>${trail.trail_name}</strong><br>
+        ${trail.latitude}, ${trail.longitude}
+    `);
+
+    markers.push(marker);
+});
+
+if (markers.length > 0) {
+    const group = L.featureGroup(markers);
+    map.fitBounds(group.getBounds().pad(0.08));
+}
+
+document.querySelectorAll('.trail-item').forEach((item) => {
+    item.addEventListener('click', () => {
+    const index = Number(item.dataset.index);
+    const trail = trails[index];
+    const marker = markers[index];
+
+    map.setView([trail.latitude, trail.longitude], 13);
+    marker.openPopup();
+    });
+});
+</script>
+<%- include('../partials/footer') %>
