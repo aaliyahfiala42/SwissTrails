@@ -13,8 +13,8 @@ Steps involved in Ant colony optimization:
    4. Termination: We stop the algorithm after a certain number of iterations or when a satisfactory solution is found.
 
 Sources: 
+"Implementing Ant colony optimization in python- solving Traveling salesman problem" by Induraj
 https://induraj2020.medium.com/implementation-of-ant-colony-optimization-using-python-solve-traveling-salesman-problem-9c14d3114475 
-
 
 
 Data:
@@ -38,7 +38,6 @@ https://map.geo.admin.ch/#/map?lang=en&center=2642817.22,1270166.01&z=0.88&topic
 
 Source Attribution
 "Bundesamt für Strassen, Kanton, Stiftung SchweizMobil"
-
 
 AI Chats:
 * Search for the best data source: https://chatgpt.com/share/69c98ce7-6b6c-8392-be58-d47d9e3e2705 

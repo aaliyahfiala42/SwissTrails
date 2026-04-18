@@ -21,7 +21,7 @@
 </aside>
 
 <div id="map"></div>
-</div>coords
+</div>
 
 <!-- Leaflet JS -->
 <script
@@ -43,7 +43,14 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const markers = [];
 
 trails.forEach((trail) => {
-    const marker = L.marker([trail.latitude, trail.longitude])
+    const marker = L.circleMarker([trail.latitude, trail.longitude], {
+        radius: 2,
+        fillColor: 'red',
+        color: 'red',
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 1
+    })
     .addTo(map)
     .bindPopup(`
         <strong>${trail.trail_name}</strong><br>
@@ -52,11 +59,43 @@ trails.forEach((trail) => {
 
     markers.push(marker);
 });
-
+//fit map to show all trails
 if (markers.length > 0) {
     const group = L.featureGroup(markers);
     map.fitBounds(group.getBounds().pad(0.08));
 }
+
+
+//simulated ants visualization
+const antIcon = L.icon({
+    iconUrl: 'assets/ant-silhouette.png',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAncor: [0, -12]
+});
+
+//create an example path for testing display
+const examplePathIndices = [0, 3, 5, 2, 7, 15, 12, 30, 18, 17, 1, 9, 4, 8, 10, 0];
+
+//convert to coordinate, draw line path
+const examplePath = examplePathIndices.map(i => [
+    trails[i].latitude,
+    trails[i].longitude
+]);
+const pathLine = L.polyline(examplePath, {
+    color: 'green',
+    dashArray: '6, 6',
+    weight: 2,
+    opacity: 0.8,
+    lineCap: 'round'
+}).addTo(map);
+
+const antMarkers = examplePath.map((latlng, i) => {
+    return L.marker(latlng, { icon: antIcon })
+        .addTo(map)
+        .bindPopup(`Ant at step ${i + 1}`);
+})
+
 
 document.querySelectorAll('.trail-item').forEach((item) => {
     item.addEventListener('click', () => {
