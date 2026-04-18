@@ -1,5 +1,5 @@
 # SwissTrails
-This project implements Ant Colony Optimization for points in Switzerland
+This project implements Ant Colony Optimization for hiking trail points in Switzerland
 
 
 Steps involved in Ant colony optimization:

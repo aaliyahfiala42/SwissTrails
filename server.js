@@ -7,7 +7,7 @@ const app = express();
 
 const {parse} = require('csv-parse/sync');
 
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3007;
 
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
