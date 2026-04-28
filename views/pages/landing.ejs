@@ -21,6 +21,34 @@
 </aside>
 
 <div id="map"></div>
+
+<div class="parameters">
+<h2>Parameters</h2>
+<label>Number of ants (m): <input id="antsInput" type="number"  value="20" min="1" max="100"></label>
+<label>Number of iterations: <input id="iterationsInput" type="number" value="20" min="1" max="500"></label>
+<label>Number of trails: <input id="trailsInput" type="number" value="20" min="1" max="500"></label>
+
+<label>Pheromone deposit strength (Q): <input id="pheromoneInput" type="number" value="100" min="1" max="1000" step="1"></label>
+<label>Evaporation rate (ρ): <input id="evaporationInput" type="number" value="0.5" min="0" max="1" step="0.01"></label>
+<label>Pheromone influence (α): <input id="alphaInput" type="number" value="1" min="0" max="10" step="0.1"></label>
+<label>Distance influence (ß): <input id="betaInput" type="number" value="3" min="1" max="10" step="0.1"></label>
+
+<div>
+<button id="startACOBtn">Start</button>
+<button id="resetACOBtn">Reset</button>
+</div>
+
+
+<div class="metrics">
+    <div>Iteration: <strong id="iterationMetric">0</strong></div>
+    <div>Best path distance: <strong id="costMetric">-</strong> km</div>
+</div>
+
+<canvas id="convergenceCanvas"></canvas>
+
+</div>
+
+
 </div>
 
 <!-- Leaflet JS -->
@@ -45,8 +73,8 @@ const markers = [];
 trails.forEach((trail) => {
     const marker = L.circleMarker([trail.latitude, trail.longitude], {
         radius: 2,
-        fillColor: 'red',
-        color: 'red',
+        fillColor: 'grey',
+        color: 'grey',
         weight: 1,
         opacity: 1,
         fillOpacity: 1
@@ -65,7 +93,8 @@ if (markers.length > 0) {
     map.fitBounds(group.getBounds().pad(0.08));
 }
 
-
+/* 
+//Example testing setup
 //simulated ants visualization
 const antIcon = L.icon({
     iconUrl: 'assets/ant-silhouette.png',
@@ -95,17 +124,354 @@ const antMarkers = examplePath.map((latlng, i) => {
         .addTo(map)
         .bindPopup(`Ant at step ${i + 1}`);
 })
+ */
+
+const antInput = document.getElementById("antsInput");
+const iterationsInput = document.getElementById("iterationsInput");
+const trailsInput = document.getElementById("trailsInput");
+const evaporationInput = document.getElementById("evaporationInput");
+const alphaInput = document.getElementById("alphaInput");
+const betaInput = document.getElementById("betaInput");
+const pheromoneInput = document.getElementById("pheromoneInput");
+
+const iterationMetric = document.getElementById("iterationMetric");
+const costMetric = document.getElementById("costMetric");
+
+const convergenceCanvas = document.getElementById('convergenceCanvas');
+const ctx = convergenceCanvas.getContext('2d');
+
+let antMarkers = [];
+let antLines = [];
+let bestRouteLine = null;
+let running = false;
+let convergenceHistory = [];
 
 
-document.querySelectorAll('.trail-item').forEach((item) => {
-    item.addEventListener('click', () => {
-    const index = Number(item.dataset.index);
-    const trail = trails[index];
-    const marker = markers[index];
-
-    map.setView([trail.latitude, trail.longitude], 13);
-    marker.openPopup();
-    });
+const antIcon = L.icon({
+    iconUrl: '/assets/ant-silhouette.png',
+    iconSize: [22, 22],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -12]
 });
+
+
+//convert to coordinates
+function latLngTrail(index, points) {
+    return [points[index].latitude, points[index].longitude ];
+}
+
+//calculate Haversine distnace in kilometers
+//Haversine
+//formula: 	a = sin²(Δφ/2) + cos φ1 ⋅ cos φ2 ⋅ sin²(Δλ/2)
+//c = 2 ⋅ atan2( √a, √(1−a) )
+//d = R ⋅ c
+//where: 	φ is latitude, λ is longitude, R is earth’s radius (mean radius = 6,371km);
+
+function haversine(p1, p2){
+    const R =  6371e3;
+    const phi1 = p1.latitude * Math.PI / 180; //radians
+    const phi2 = p2.latitude * Math.PI / 180;
+
+    const dphi = (p2.latitude - p1.latitude) * Math.PI/180;
+    const dlambda = (p2.longitude - p1.longitude) * Math.PI/180;
+
+    const a = Math.sin(dphi/2) ** 2 +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(dlambda/2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c;
+
+    return d;
+}
+
+//distanceMatrix[i][j] distance from point i to j
+function buildDistanceMatrix(points) {
+    const n = points.length; 
+    const matrix = Array.from({length: n}, () => Array(n).fill(0));
+
+    for (let i = 0; i < n; i++){
+        for (let j = 0; j < n; j++){
+            if (i !== j){
+                matrix[i][j] = haversine(points[i], points[j]);
+            }
+        }
+    }
+
+    return matrix;
+}
+
+//pick next point using pheromone and distance
+//score_ij​=τ_ij**α ​(1/d_ij​​**)β
+//Pij​=(​τ_ij**α ​η_ij**β)/ ∑k∈unvisited ​τ_ik**α ​η_ik**β​​,  ηij​=1/d_ij​​
+function chooseNextPoint(current, visited, pheromone, distanceMetric, alpha, beta){
+    const choices = [];
+    let totalScore = 0;
+
+    for ( let j = 0; j < visited.length; j++){
+        if(!visited[j]){
+            const tau = pheromone[current][j] ** alpha;
+            const eta  = (1/distanceMetric[current][j]) ** beta;
+            const score = tau * eta;
+
+            choices.push({ index: j, score});
+            totalScore+= score;
+        }
+    }
+
+    //random choice, influence by score
+    let random = Math.random() * totalScore;
+
+    for (const choice of choices) {
+        random -= choice.score;
+        if (random <= 0){
+            return choice.index;
+        }
+    }
+
+    //else return last valid unvisited point
+    return choices[choices.length - 1].index;
+}
+
+//compute total route cost 
+function routeCost(route, distanceMatrix){
+    let cost = 0;
+
+    for (let i = 0; i < route.length -1; i++){
+        cost += distanceMatrix[route[i]][route[i+1]];
+    }
+
+    //go home
+    cost += distanceMatrix[route[route.length-1]][route[0]];
+
+    return cost;
+}
+
+//draw current best
+function drawBestRoute(route, points){
+    const coords = route.map( i => latLngTrail(i, points));
+    coords.push(latLngTrail(route[0], points));
+
+    if (bestRouteLine) {
+        map.removeLayer(bestRouteLine);
+    }
+
+    bestRouteLine = L.polyline(coords, {
+        color: 'blue',
+        weight: 5,
+        opacity: 0.85
+    }).addTo(map);
+}
+
+
+function drawConvergence() {
+    ctx.clearRect(0, 0, convergenceCanvas.width, convergenceCanvas.height);
+
+    if (convergenceHistory.length < 2) return;
+
+    const padding = 10;
+    const width = convergenceCanvas.width - padding * 2;
+    const height = convergenceCanvas.height - padding * 2;
+    const min = Math.min(...convergenceHistory);
+    const max = Math.max(...convergenceHistory);
+
+    ctx.beginPath();
+
+    convergenceHistory.forEach((value, i) => {
+        const x = padding + (i/ (convergenceHistory.length -1) *width);
+        const normalized = (value - min)/((max -min) || 1);
+        const y = padding + normalized*height;
+
+        const flippedY = convergenceCanvas.height -y;
+
+        if (i == 0){
+            ctx.moveTo(x, flippedY);
+        } else {
+            ctx.lineTo(x, flippedY);
+        }
+    });
+
+    ctx.stroke();
+}
+
+
+//eraser
+function clearACOLayers() {
+    antMarkers.forEach(marker=> map.removeLayer(marker));
+    antLines.forEach(line => map.removeLayer(line));
+
+    antMarkers=[];
+    antLines=[];
+
+    if(bestRouteLine){
+        map.removeLayer(bestRouteLine);
+        bestRouteLine=null;
+    }
+
+    convergenceHistory = [];
+    drawConvergence();
+
+    iterationMetric.textContent = '0';
+    costMetric.textContent = "-";
+
+}
+
+
+
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+
+//Ant Colony Optimization algorithm
+async function runACO(){
+    if (running) return;
+
+    clearACOLayers();
+    running=true;
+
+
+    const m = Number(antInput.value);
+    const maxIterations = Number(iterationsInput.value);
+    const maxTrails = Number(trailsInput.value);
+
+    //choose n first points, TODO: switch out with trail selection
+    const points = trails.slice(0, Math.min(maxTrails, trails.length));
+
+    const n = points.length;
+    const distanceMatrix = buildDistanceMatrix(points);
+
+    const evaporation = Number(evaporationInput.value);
+    const Q = Number(pheromoneInput.value)
+    const alpha = Number(alphaInput.value);
+    const beta = Number(betaInput.value);
+
+    let pheromone = Array.from({ length: n }, () => Array(n).fill(1));
+
+    let bestRoute = null;
+    let bestCost = Infinity;
+
+    //visualize 
+    for (let a = 0; a < m; a++){
+        const start = a % n;
+        const marker = L.marker(latLngTrail(start, points), {
+            icon: antIcon
+        }).addTo(map);
+
+        const line = L.polyline([latLngTrail(start, points)], {
+
+           color: 'orange',
+            weight: 1,
+            opacity: 0.25
+        }).addTo(map);
+
+        antMarkers.push(marker);
+        antLines.push(line);
+    }
+
+
+    //run iterations
+    for (let iter = 1; iter<= maxIterations; iter++ ){
+        if(!running) break;
+
+        const routes = [];
+        const costs = [];
+
+
+        //build a route for each ant
+        for (let a = 0; a < m; a++){
+            const start = a %n;
+            const visited = Array(n).fill(false);
+            const route = [start];
+
+            visited[start] = true;
+
+            let current = start;
+
+            antMarkers[a].setLatLng(latLngTrail(current, points));
+            antLines[a].setLatLngs([latLngTrail(current, points)]);
+
+            while(route.length < n) {
+                const next = chooseNextPoint(current, visited, pheromone, distanceMatrix, alpha, beta);
+
+                route.push(next);
+                visited[next] = true;
+                current = next;
+                
+                const coords = route.map(x => latLngTrail(x, points));
+
+                antMarkers[a].setLatLng(latLngTrail(current, points));
+                antLines[a].setLatLngs(coords);
+
+                await sleep(4);
+            }
+
+            const cost = routeCost(route, distanceMatrix);
+
+            routes.push(route);
+            costs.push(cost);
+
+            if (cost < bestCost){
+                bestCost = cost;
+                bestRoute = route.slice();
+
+                drawBestRoute(bestRoute, points);
+            }
+
+        }
+
+        //evaporate
+        for (let i = 0; i < n; i++ ){
+            for ( let j = 0; j <n; j++){
+                pheromone[i][j] *= evaporation;
+            }
+        }
+
+        //pheromone
+        for (let p = 0; p < routes.length; p++){
+            const route = routes[p];
+            const cost = costs[p];
+            const deposit = Q / cost;
+
+            for ( let i = 0; i < route.length -1; i++){
+                const from = route[i];
+                const to = route[i+1];
+
+                pheromone[from][to] += deposit;
+                pheromone[to][from] += deposit;
+            }
+
+            const lastEdge = route[route.length-1];
+            const firstEdge = route[0];
+
+                pheromone[lastEdge][firstEdge] += deposit;
+                pheromone[firstEdge][lastEdge] += deposit;
+        }
+
+        convergenceHistory.push(bestCost);
+        iterationMetric.textContent = iter;
+        costMetric.textContent = bestCost.toFixed(2);
+        drawConvergence();
+
+        await sleep(20);
+
+
+
+    }
+    running = false;
+}
+
+
+
+
+document.getElementById('startACOBtn').addEventListener('click', runACO);
+document.getElementById('resetACOBtn').addEventListener('click', () => {
+    running = false;
+    clearACOLayers();
+
+})
+
+
 </script>
 <%- include('../partials/footer') %>

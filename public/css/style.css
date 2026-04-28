@@ -68,3 +68,48 @@ body {
     min-height: 300px;
     }
 }
+
+
+.parameters {
+    margin: 16px 0;
+    padding: 12px;
+    background: #f7f7f7;
+    border-radius: 8px;
+    font-size: 14px;
+    align-items: end;
+    justify-content: end;
+}
+
+.parameters h2 {
+    margin: 0 0 10px;
+    font-size: 16px;
+}
+
+.parameters label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.parameters input {
+    width: 100%;
+    padding: 5px;
+    margin-top: 3px;
+}
+
+.parameters button {
+    margin: 4px 4px 8px 0;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.metrics {
+    margin-top: 8px;
+    line-height: 1.6;
+}
+
+#convergenceCanvas {
+    margin-top: 8px;
+    width: 100%;
+    background: white;
+    border: 1px solid #ddd;
+}

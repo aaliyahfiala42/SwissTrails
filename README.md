@@ -16,6 +16,8 @@ Sources:
 "Implementing Ant colony optimization in python- solving Traveling salesman problem" by Induraj
 https://induraj2020.medium.com/implementation-of-ant-colony-optimization-using-python-solve-traveling-salesman-problem-9c14d3114475 
 
+Calculating Haversine distances
+https://www.movable-type.co.uk/scripts/latlong.html 
 
 Data:
 https://www.geocat.ch/geonetwork/srv/api/records/95638869-ef86-4e95-ae60-20e84e8dca8c?language=eng
@@ -41,3 +43,4 @@ Source Attribution
 
 AI Chats:
 * Search for the best data source: https://chatgpt.com/share/69c98ce7-6b6c-8392-be58-d47d9e3e2705 
+
