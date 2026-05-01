@@ -1,67 +1,12 @@
-<%- include('../partials/header') %>
-<%- include('../partials/navbar') %>
-<div class="page">
-<aside class="sidebar">
-    <h1>Swiss Trails</h1>
-    <p><%= trails.length %> trail points</p>
+const trails = window.trails || [];
+const map = L.map('map', {
+    zoomControl: false,
+    preferCanvas: true
+}).setView([46.8, 8.2], 10);
 
-    <ul class="trail-list">
-    <% trails.forEach((trail, index) => { %>
-        <li
-        class="trail-item"
-        data-index="<%= index %>"
-        >
-        <strong><%= trail.trail_name %></strong>
-        <div class="coords">
-            <%= trail.latitude %>, <%= trail.longitude %>
-        </div>
-        </li>
-    <% }) %>
-    </ul>
-</aside>
-
-<div id="map"></div>
-
-<div class="parameters">
-<h2>Parameters</h2>
-<label>Number of ants (m): <input id="antsInput" type="number"  value="20" min="1" max="100"></label>
-<label>Number of iterations: <input id="iterationsInput" type="number" value="20" min="1" max="500"></label>
-<label>Number of trails: <input id="trailsInput" type="number" value="20" min="1" max="500"></label>
-
-<label>Pheromone deposit strength (Q): <input id="pheromoneInput" type="number" value="100" min="1" max="1000" step="1"></label>
-<label>Evaporation rate (ρ): <input id="evaporationInput" type="number" value="0.5" min="0" max="1" step="0.01"></label>
-<label>Pheromone influence (α): <input id="alphaInput" type="number" value="1" min="0" max="10" step="0.1"></label>
-<label>Distance influence (ß): <input id="betaInput" type="number" value="3" min="1" max="10" step="0.1"></label>
-
-<div>
-<button id="startACOBtn">Start</button>
-<button id="resetACOBtn">Reset</button>
-</div>
-
-
-<div class="metrics">
-    <div>Iteration: <strong id="iterationMetric">0</strong></div>
-    <div>Best path distance: <strong id="costMetric">-</strong> km</div>
-</div>
-
-<canvas id="convergenceCanvas"></canvas>
-
-</div>
-
-
-</div>
-
-<!-- Leaflet JS -->
-<script
-src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-crossorigin=""
-></script>
-
-<script>
-const trails = <%- JSON.stringify(trails) %>;
-
-const map = L.map('map').setView([46.8, 8.2], 8);
+L.control.zoom({
+    position: 'bottomright'
+}).addTo(map);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -72,25 +17,25 @@ const markers = [];
 
 trails.forEach((trail) => {
     const marker = L.circleMarker([trail.latitude, trail.longitude], {
-        radius: 2,
-        fillColor: 'grey',
-        color: 'grey',
+        radius: 4,
+        fillColor: '#285943',
+        color: '#ffffff',
         weight: 1,
         opacity: 1,
-        fillOpacity: 1
+        fillOpacity: 0.85
     })
     .addTo(map)
     .bindPopup(`
         <strong>${trail.trail_name}</strong><br>
-        ${trail.latitude}, ${trail.longitude}
-    `);
+        <span>${Number(trail.latitude).toFixed(4)}, ${Number(trail.longitude).toFixed(4)}</span>    
+        `);
 
     markers.push(marker);
 });
 //fit map to show all trails
 if (markers.length > 0) {
     const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.08));
+    map.fitBounds(group.getBounds().pad(0));
 }
 
 /* 
@@ -150,8 +95,9 @@ let convergenceHistory = [];
 const antIcon = L.icon({
     iconUrl: '/assets/ant-silhouette.png',
     iconSize: [22, 22],
-    iconAnchor: [13, 13],
-    popupAnchor: [0, -12]
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -10],
+    className: 'ant-icon'
 });
 
 
@@ -168,7 +114,7 @@ function latLngTrail(index, points) {
 //where: 	φ is latitude, λ is longitude, R is earth’s radius (mean radius = 6,371km);
 
 function haversine(p1, p2){
-    const R =  6371e3;
+    const R =  6371;
     const phi1 = p1.latitude * Math.PI / 180; //radians
     const phi2 = p2.latitude * Math.PI / 180;
 
@@ -256,9 +202,11 @@ function drawBestRoute(route, points){
     }
 
     bestRouteLine = L.polyline(coords, {
-        color: 'blue',
-        weight: 5,
-        opacity: 0.85
+        color: '#285943',
+        weight: 2,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round'
     }).addTo(map);
 }
 
@@ -268,25 +216,42 @@ function drawConvergence() {
 
     if (convergenceHistory.length < 2) return;
 
-    const padding = 10;
+    const padding = 30;
     const width = convergenceCanvas.width - padding * 2;
     const height = convergenceCanvas.height - padding * 2;
     const min = Math.min(...convergenceHistory);
     const max = Math.max(...convergenceHistory);
+    const range = max-min || 1;
+
+
 
     ctx.beginPath();
+
+    //draw axes
+    ctx.moveTo(padding,padding);
+    ctx.lineTo(padding, padding + height);
+    ctx.lineTo(padding +width, padding + height);
+    ctx.strokeStyle="#999";
+    ctx.stroke();
+
+    ctx.fillStyle = "#667";
+    ctx.fillText(max.toFixed(1), 2, padding+4);
+    ctx.fillText(min.toFixed(1), 2, padding+height);
+    ctx.fillText("1", padding, padding +height+14);
+    ctx.fillText(convergenceHistory.length, padding +width -8, padding +height+14);
+
+        ctx.beginPath();
 
     convergenceHistory.forEach((value, i) => {
         const x = padding + (i/ (convergenceHistory.length -1) *width);
         const normalized = (value - min)/((max -min) || 1);
-        const y = padding + normalized*height;
+        const y = padding + height - normalized*height;
 
-        const flippedY = convergenceCanvas.height -y;
 
         if (i == 0){
-            ctx.moveTo(x, flippedY);
+            ctx.moveTo(x, y);
         } else {
-            ctx.lineTo(x, flippedY);
+            ctx.lineTo(x, y);
         }
     });
 
@@ -360,10 +325,11 @@ async function runACO(){
         }).addTo(map);
 
         const line = L.polyline([latLngTrail(start, points)], {
-
-           color: 'orange',
+            color: '#d97706',
             weight: 1,
-            opacity: 0.25
+            opacity: 0.52,
+            lineCap: 'round',
+            interactive: false
         }).addTo(map);
 
         antMarkers.push(marker);
@@ -472,6 +438,3 @@ document.getElementById('resetACOBtn').addEventListener('click', () => {
 
 })
 
-
-</script>
-<%- include('../partials/footer') %>

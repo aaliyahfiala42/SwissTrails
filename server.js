@@ -39,8 +39,24 @@ function loadTrails() {
 
 app.get('/', (req, res) => {
     const trails = loadTrails();
-    res.render("pages/landing", {trails});
+    res.render("pages/visualizer", {trails});
 })
+
+app.get('/explanation', (req, res) => {
+    res.render("pages/explanation");
+})
+
+
+app.get('/presentation', (req, res) => {
+    res.render("pages/presentation");
+})
+
+
+app.get('/sources', (req, res) => {
+    res.render("pages/sources");
+})
+
+
 
 app.listen(PORT, '127.0.0.1', () => {
     console.log(`http://localhost:${PORT}`);
