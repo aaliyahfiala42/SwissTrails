@@ -57,8 +57,8 @@ app.get('/sources', (req, res) => {
 })
 
 
-app.get('/obeservations', (req, res) => {
-    res.render("pages/obeservations");
+app.get('/observations', (req, res) => {
+    res.render("pages/observations");
 })
 
 
