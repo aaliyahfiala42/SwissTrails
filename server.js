@@ -57,6 +57,12 @@ app.get('/sources', (req, res) => {
 })
 
 
+app.get('/obeservations', (req, res) => {
+    res.render("pages/obeservations");
+})
+
+
+
 
 app.listen(PORT, '127.0.0.1', () => {
     console.log(`http://localhost:${PORT}`);
