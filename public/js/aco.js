@@ -317,7 +317,7 @@ async function runACO(){
     let bestRoute = null;
     let bestCost = Infinity;
 
-    //visualize 
+    //visualize initial conditions
     for (let a = 0; a < m; a++){
         const start = a % n;
         const marker = L.marker(latLngTrail(start, points), {
@@ -365,6 +365,7 @@ async function runACO(){
                 visited[next] = true;
                 current = next;
                 
+                //visualize route for ant a
                 const coords = route.map(x => latLngTrail(x, points));
 
                 antMarkers[a].setLatLng(latLngTrail(current, points));
@@ -421,9 +422,6 @@ async function runACO(){
         drawConvergence();
 
         await sleep(20);
-
-
-
     }
     running = false;
 }
