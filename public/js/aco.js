@@ -101,6 +101,17 @@ const antIcon = L.icon({
 });
 
 
+//set same random values for comparisons
+function randomNumberGenerator(seed){
+    return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296; //between 0 and 1
+    };
+}
+
+
 //convert to coordinates
 function latLngTrail(index, points) {
     return [points[index].latitude, points[index].longitude ];
@@ -149,7 +160,7 @@ function buildDistanceMatrix(points) {
 //pick next point using pheromone and distance
 //score_ij​=τ_ij**α ​(1/d_ij​​**)β
 //Pij​=(​τ_ij**α ​η_ij**β)/ ∑k∈unvisited ​τ_ik**α ​η_ik**β​​,  ηij​=1/d_ij​​
-function chooseNextPoint(current, visited, pheromone, distanceMetric, alpha, beta){
+function chooseNextPoint(current, visited, pheromone, distanceMetric, alpha, beta, rand){
     const choices = [];
     let totalScore = 0;
 
@@ -165,7 +176,7 @@ function chooseNextPoint(current, visited, pheromone, distanceMetric, alpha, bet
     }
 
     //random choice, influence by score
-    let random = Math.random() * totalScore;
+    let random = rand() * totalScore;
 
     for (const choice of choices) {
         random -= choice.score;
@@ -296,6 +307,8 @@ async function runACO(){
     clearACOLayers();
     running=true;
 
+    const seed = 241757;
+    const rand = randomNumberGenerator(seed);
 
     const m = Number(antInput.value);
     const maxIterations = Number(iterationsInput.value);
@@ -359,7 +372,7 @@ async function runACO(){
             antLines[a].setLatLngs([latLngTrail(current, points)]);
 
             while(route.length < n) {
-                const next = chooseNextPoint(current, visited, pheromone, distanceMatrix, alpha, beta);
+                const next = chooseNextPoint(current, visited, pheromone, distanceMatrix, alpha, beta, rand);
 
                 route.push(next);
                 visited[next] = true;
