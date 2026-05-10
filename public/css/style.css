@@ -528,3 +528,38 @@ input {
   height: 100%;
   border: none;
 }
+
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.main-content {
+    flex: 1;
+    width: 100%;
+}
+
+.footer {
+    margin-top: auto;
+    min-height: 56px;
+    padding: 14px 24px;
+
+    background: var(--pine-dark);
+    color: rgba(255, 255, 255, 0.72);
+
+    font-size: 13px;
+    text-align: center;
+}
