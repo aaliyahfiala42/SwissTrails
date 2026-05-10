@@ -79,6 +79,9 @@ const alphaInput = document.getElementById("alphaInput");
 const betaInput = document.getElementById("betaInput");
 const pheromoneInput = document.getElementById("pheromoneInput");
 
+const speedInput = document.getElementById("speedInput");
+
+
 const iterationMetric = document.getElementById("iterationMetric");
 const costMetric = document.getElementById("costMetric");
 
@@ -116,6 +119,20 @@ function randomNumberGenerator(seed){
 function latLngTrail(index, points) {
     return [points[index].latitude, points[index].longitude ];
 }
+
+//color trails selected 
+function selectedTrails(n) {
+    markers.forEach((marker, index) => {
+        const selected = index < n;
+        marker.setStyle({
+            radius: selected ? 5: 3,
+            fillColor: '#285943',
+            fillOpacity: selected ? 1 : 0.25,
+            opacity: selected ? 1 : 0.4
+        });
+    });
+}
+
 
 //calculate Haversine distnace in kilometers
 //Haversine
@@ -213,8 +230,8 @@ function drawBestRoute(route, points){
     }
 
     bestRouteLine = L.polyline(coords, {
-        color: '#285943',
-        weight: 2,
+        color: '#d97706',
+        weight: 3,
         opacity: 0.9,
         lineCap: 'round',
         lineJoin: 'round'
@@ -295,7 +312,8 @@ function clearACOLayers() {
 
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    const speed = speedInput.checked? 0 :ms;
+    return new Promise(resolve => setTimeout(resolve, speed));    
 }
 
 
@@ -312,10 +330,11 @@ async function runACO(){
 
     const m = Number(antInput.value);
     const maxIterations = Number(iterationsInput.value);
-    const maxTrails = Number(trailsInput.value);
+    const maxTrails = Math.min(Number(trailsInput.value), trails.length);
+    selectedTrails(maxTrails);
 
     //choose n first points, TODO: switch out with trail selection
-    const points = trails.slice(0, Math.min(maxTrails, trails.length));
+    const points = trails.slice(0, maxTrails);
 
     const n = points.length;
     const distanceMatrix = buildDistanceMatrix(points);
@@ -338,9 +357,9 @@ async function runACO(){
         }).addTo(map);
 
         const line = L.polyline([latLngTrail(start, points)], {
-            color: '#d97706',
+            color: '#7fb3d5',
             weight: 1,
-            opacity: 0.52,
+            opacity: 0.82,
             lineCap: 'round',
             interactive: false
         }).addTo(map);
