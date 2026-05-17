@@ -1,7 +1,195 @@
 <%- include('../partials/header') %>
 <%- include('../partials/navbar') %>
 
+<main class="main-content">
+    <section class="how-page">
+
+        <!-- Hero -->
+        <section class="how-hero">
+            <div class="how-hero-text">
+                <span class="eyebrow">Swiss Trails Algorithm</span>
+                <h1>What is it?</h1>
+                <p>
+The application allows you to find a near optimal path through popular swiss trail heads, minimizing the total distance between them. This is a traveling salesman combinatorial problem, where we treat trail heads as nodes and the path between them as edges in a graph problem.  We have implemented the Ant Colony Optimization problem, which is especially good at solving the traveling salesman problem, and created visualizations to allow you to visualize the artificial ants creating their potential solution paths (in blue), highlighting the best path found so far (orange). 
+                </p>
+
+                <a class="how-button" href="/">Try the route finder</a>
+            </div>
+
+            <figure class="how-photo hero-photo">
+                <img src="/assets/allTrailsCropped.png" alt="Swiss trail map n=359">
+                <figcaption>ACO on all 359 trailheads after 100 iterations</figcaption>
+            </figure>
+        </section>
 
 
+        <!-- Overview Cards -->
+        <section class="how-section">
+            <div class="section-heading">
+                <span class="eyebrow">Process</span>
+                <p>
+                    Each ant creates a possible route. Over time, better routes become more likely
+                    because they receive more pheromone.
+                </p>
+            </div>
+
+            <div class="step-grid">
+                <article class="step-card">
+                    <span class="step-number">01</span>
+                    <h3>Select trail points</h3>
+                    <p>
+                        The algorithm first uses the selected number of trail points from the map.
+                        These become the nodes that the ants must visit.
+                    </p>
+                </article>
+
+                <article class="step-card">
+                    <span class="step-number">02</span>
+                    <h3>Build routes</h3>
+                    <p>
+                        Each ant starts from a trail point and repeatedly chooses the next unvisited
+                        point using distance and pheromone strength.
+                    </p>
+                </article>
+
+                <article class="step-card">
+                    <span class="step-number">03</span>
+                    <h3>Update pheromones</h3>
+                    <p>
+                        Shorter routes deposit more pheromone. Older pheromone evaporates so the
+                        algorithm can keep exploring new routes.
+                    </p>
+                </article>
+
+                <article class="step-card">
+                    <span class="step-number">04</span>
+                    <h3>Improve the best path</h3>
+                    <p>
+                        After several iterations, the best route is drawn on the map and the
+                        convergence chart shows how the distance improves.
+                    </p>
+                </article>
+            </div>
+        </section>
+
+
+
+
+        <!-- Code Snippets -->
+        <section class="how-section">
+
+            <div class="code-grid">
+                <article class="code-card">
+                    <h3>1. Distance between two trail points</h3>
+                    <p>
+                        The Haversine formula calculates the distance between two latitude and longitude points.
+                    </p>
+
+                <pre><code>function haversine(p1, p2) {
+                    const R = 6371;
+
+                    const phi1 = p1.latitude * Math.PI / 180;
+                    const phi2 = p2.latitude * Math.PI / 180;
+
+                    const dphi = (p2.latitude - p1.latitude) * Math.PI / 180;
+                    const dlambda = (p2.longitude - p1.longitude) * Math.PI / 180;
+
+                    const a = Math.sin(dphi / 2) ** 2 +
+                            Math.cos(phi1) * Math.cos(phi2) *
+                            Math.sin(dlambda / 2) ** 2;
+
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+                    return R * c;
+                }</code></pre>
+                </article>
+
+                <article class="code-card">
+                    <h3>2. Choosing the next trail point</h3>
+                    <p>
+                        Ants prefer nearby points and paths with stronger pheromone.
+                    </p>
+
+<pre><code>const tau = pheromone[current][j] ** alpha;
+const eta = (1 / distanceMatrix[current][j]) ** beta;
+const score = tau * eta;</code></pre>
+                </article>
+
+                <article class="code-card">
+                    <h3>3. Building all ant routes together</h3>
+                    <p>
+                        Promise.all lets all ants visually build their routes at the same time.
+                    </p>
+
+<pre><code>const antSolutions = await Promise.all(
+    Array.from({ length: m }, (_, a) =>
+        buildAntRoutes(
+            a,
+            iter,
+            nodes,
+            pheromone,
+            distanceMatrix,
+            alpha,
+            beta,
+            seed
+        )
+    )
+);</code></pre>
+                </article>
+            </div>
+        </section>
+
+
+        <!-- Parameters -->
+        <section class="how-section">
+            <div class="section-heading">
+                <span class="eyebrow">Parameters</span>
+                <h2>What the controls mean</h2>
+            </div>
+
+            <div class="parameter-list">
+                <div>
+                    <strong>m: number of ants</strong>
+                    <p>More ants means more route attempts per iteration.</p>
+                </div>
+
+                <div>
+                    <strong>n: number of trail points</strong>
+                    <p>The number of points that the route must visit.</p>
+                </div>
+
+                <div>
+                    <strong>NC: number of iterations</strong>
+                    <p>How many times the colony repeats the route-building process.</p>
+                </div>
+                <div>
+                    <strong>ρ: evaporation rate</strong>
+                    <p>Controls how much pheromone remains after each iteration.</p>
+                </div>
+
+                <div>
+                    <strong>Q: pheromone deposit strength</strong>
+                    <p>Controls how much pheromone ants add after completing a route.</p>
+                </div>
+
+
+                <div>
+                    <strong>α: pheromone influence</strong>
+                    <p>Controls how strongly ants follow existing pheromone trails.</p>
+                </div>
+
+                <div>
+                    <strong>β: distance influence</strong>
+                    <p>Controls how strongly ants prefer closer trail points.</p>
+                </div>
+
+
+            </div>
+        </section>
+
+
+
+    </section>
+</main>
 
 <%- include('../partials/footer') %>

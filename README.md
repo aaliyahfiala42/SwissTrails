@@ -1,6 +1,12 @@
 # SwissTrails
 This project implements Ant Colony Optimization for hiking trail points in Switzerland
 
+Run application locally: 
+   git clone <repo>
+   cd Swisstrails
+   npm install 
+   node server.js
+
 
 Steps involved in Ant colony optimization:
 

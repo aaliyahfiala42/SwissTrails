@@ -345,7 +345,7 @@ async function buildAntRoutes(a, iter, nodes, pheromone, distanceMatrix, alpha, 
         antMarkers[a].setLatLng(latLngTrail(current, nodes));
         antLines[a].setLatLngs(coords);
 
-        await sleep(20);
+        await sleep(100);
     }
 
     const cost = routeCost(route, distanceMatrix);
@@ -515,7 +515,7 @@ async function runACO(){
         costMetric.textContent = bestCost.toFixed(2);
         drawConvergence();
 
-        await sleep(20);
+        await sleep(100);
     }
     running = false;
 }
