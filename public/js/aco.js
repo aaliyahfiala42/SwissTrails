@@ -116,8 +116,8 @@ function randomNumberGenerator(seed){
 
 
 //convert to coordinates
-function latLngTrail(index, points) {
-    return [points[index].latitude, points[index].longitude ];
+function latLngTrail(index, nodes) {
+    return [nodes[index].latitude, nodes[index].longitude ];
 }
 
 //color trails selected 
@@ -159,14 +159,14 @@ function haversine(p1, p2){
 }
 
 //distanceMatrix[i][j] distance from point i to j
-function buildDistanceMatrix(points) {
-    const n = points.length; 
+function buildDistanceMatrix(nodes) {
+    const n = nodes.length; 
     const matrix = Array.from({length: n}, () => Array(n).fill(0));
 
     for (let i = 0; i < n; i++){
         for (let j = 0; j < n; j++){
             if (i !== j){
-                matrix[i][j] = haversine(points[i], points[j]);
+                matrix[i][j] = haversine(nodes[i], nodes[j]);
             }
         }
     }
@@ -177,7 +177,7 @@ function buildDistanceMatrix(points) {
 //pick next point using pheromone and distance
 //score_ij​=τ_ij**α ​(1/d_ij​​**)β
 //Pij​=(​τ_ij**α ​η_ij**β)/ ∑k∈unvisited ​τ_ik**α ​η_ik**β​​,  ηij​=1/d_ij​​
-function chooseNextPoint(current, visited, pheromone, distanceMetric, alpha, beta, rand){
+function chooseNextNode(current, visited, pheromone, distanceMetric, alpha, beta, rand){
     const choices = [];
     let totalScore = 0;
 
@@ -221,9 +221,9 @@ function routeCost(route, distanceMatrix){
 }
 
 //draw current best
-function drawBestRoute(route, points){
-    const coords = route.map( i => latLngTrail(i, points));
-    coords.push(latLngTrail(route[0], points));
+function drawBestRoute(route, nodes){
+    const coords = route.map( i => latLngTrail(i, nodes));
+    coords.push(latLngTrail(route[0], nodes));
 
     if (bestRouteLine) {
         map.removeLayer(bestRouteLine);
@@ -310,12 +310,51 @@ function clearACOLayers() {
 
 
 
-
 function sleep(ms) {
     const speed = speedInput.checked? 0 :ms;
     return new Promise(resolve => setTimeout(resolve, speed));    
 }
 
+
+//Parallel function, build routes together
+//all ants take a step at the same time, building solutions in parallel, instead of one after the other
+async function buildAntRoutes(a, iter, nodes, pheromone, distanceMatrix, alpha, beta, seed){
+    const n = nodes.length;
+    const rand = randomNumberGenerator(seed + iter * 323691 + a * 9458);
+
+    const start = a % n;
+    const visited = Array(n).fill(false);
+    const route = [start];
+    visited[start] = true;
+    
+    let current = start;
+    antMarkers[a].setLatLng(latLngTrail(current, nodes));
+    antLines[a].setLatLngs([latLngTrail(current, nodes)]);
+
+
+    while (route.length < n) {
+        if(!running) break;
+        const next = chooseNextNode( current, visited, pheromone, distanceMatrix, alpha, beta, rand);
+
+        route.push(next);
+        visited[next] = true;
+        current = next;
+
+        //visualize
+        const coords = route.map( x => latLngTrail(x, nodes));
+        antMarkers[a].setLatLng(latLngTrail(current, nodes));
+        antLines[a].setLatLngs(coords);
+
+        await sleep(20);
+    }
+
+    const cost = routeCost(route, distanceMatrix);
+
+    return {route, cost};
+
+
+
+}
 
 
 //Ant Colony Optimization algorithm
@@ -326,18 +365,18 @@ async function runACO(){
     running=true;
 
     const seed = 241757;
-    const rand = randomNumberGenerator(seed);
+    //const rand = randomNumberGenerator(seed);
 
     const m = Number(antInput.value);
     const maxIterations = Number(iterationsInput.value);
     const maxTrails = Math.min(Number(trailsInput.value), trails.length);
     selectedTrails(maxTrails);
 
-    //choose n first points, TODO: switch out with trail selection
-    const points = trails.slice(0, maxTrails);
+    //choose n first nodes, TODO: switch out with trail selection
+    const nodes = trails.slice(0, maxTrails);
 
-    const n = points.length;
-    const distanceMatrix = buildDistanceMatrix(points);
+    const n = nodes.length;
+    const distanceMatrix = buildDistanceMatrix(nodes);
 
     const evaporation = Number(evaporationInput.value);
     const Q = Number(pheromoneInput.value)
@@ -352,11 +391,11 @@ async function runACO(){
     //visualize initial conditions
     for (let a = 0; a < m; a++){
         const start = a % n;
-        const marker = L.marker(latLngTrail(start, points), {
+        const marker = L.marker(latLngTrail(start, nodes), {
             icon: antIcon
         }).addTo(map);
 
-        const line = L.polyline([latLngTrail(start, points)], {
+        const line = L.polyline([latLngTrail(start, nodes)], {
             color: '#7fb3d5',
             weight: 1,
             opacity: 0.82,
@@ -373,7 +412,7 @@ async function runACO(){
     for (let iter = 1; iter<= maxIterations; iter++ ){
         if(!running) break;
 
-        const routes = [];
+/*         const routes = [];
         const costs = [];
 
 
@@ -387,20 +426,20 @@ async function runACO(){
 
             let current = start;
 
-            antMarkers[a].setLatLng(latLngTrail(current, points));
-            antLines[a].setLatLngs([latLngTrail(current, points)]);
+            antMarkers[a].setLatLng(latLngTrail(current, nodes));
+            antLines[a].setLatLngs([latLngTrail(current, nodes)]);
 
             while(route.length < n) {
-                const next = chooseNextPoint(current, visited, pheromone, distanceMatrix, alpha, beta, rand);
+                const next = chooseNextNode(current, visited, pheromone, distanceMatrix, alpha, beta, rand);
 
                 route.push(next);
                 visited[next] = true;
                 current = next;
                 
                 //visualize route for ant a
-                const coords = route.map(x => latLngTrail(x, points));
+                const coords = route.map(x => latLngTrail(x, nodes));
 
-                antMarkers[a].setLatLng(latLngTrail(current, points));
+                antMarkers[a].setLatLng(latLngTrail(current, nodes));
                 antLines[a].setLatLngs(coords);
 
                 await sleep(4);
@@ -415,10 +454,33 @@ async function runACO(){
                 bestCost = cost;
                 bestRoute = route.slice();
 
-                drawBestRoute(bestRoute, points);
+                drawBestRoute(bestRoute, nodes);
             }
 
+        } 
+            */
+
+
+        //paralleize instead
+        const antSolutions = await Promise.all(
+            Array.from({length:m}, (_, a) =>
+                buildAntRoutes(a, iter,nodes, pheromone, distanceMatrix, alpha, beta, seed)
+                )
+        );
+
+        const routes = antSolutions.map(solution => solution.route);
+        const costs = antSolutions.map(solution => solution.cost);
+
+        //best route found so far
+        for (const solution of antSolutions) {
+            if (solution.cost < bestCost) {
+                bestCost = solution.cost;
+                bestRoute = solution.route.slice();
+                drawBestRoute(bestRoute, nodes);
+            }
         }
+
+
 
         //evaporate
         for (let i = 0; i < n; i++ ){

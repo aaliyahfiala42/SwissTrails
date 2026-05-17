@@ -44,3 +44,4 @@ Source Attribution
 AI Chats:
 * Search for the best data source: https://chatgpt.com/share/69c98ce7-6b6c-8392-be58-d47d9e3e2705 
 * Styling .css improvements: https://chatgpt.com/share/69f4da83-3a68-83eb-9512-e423fb0bb115 
+* How to parallize ACO to improve speed: https://chatgpt.com/share/6a08adcf-6ff0-83eb-a147-ae39845d2a3c 
